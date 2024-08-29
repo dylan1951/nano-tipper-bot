@@ -1,0 +1,26 @@
+{
+  "name": "x-nano-bot",
+  "version": "1.0.0",
+  "description": "",
+  "main": "scraper.ts",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "npx rebrowser-patches@latest patch && tsx index.ts"
+  },
+  "private": true,
+  "dependencies": {
+    "@prisma/client": "^5.18.0",
+    "dotenv": "^16.4.5",
+    "ghost-cursor": "^1.3.0",
+    "nanocurrency": "^2.5.0",
+    "puppeteer-core": "^22.15.0",
+    "rate-limiter-flexible": "^5.0.3",
+    "twitter-api-v2": "^1.17.2"
+  },
+  "devDependencies": {
+    "@types/node": "^22.5.0",
+    "prisma": "^5.18.0",
+    "typescript": "^5.5.4",
+    "tsx": "^4.19.0"
+  }
+}
