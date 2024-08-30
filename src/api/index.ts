@@ -11,7 +11,7 @@ const oauthSecrets = new Map();
 const app: Express = express();
 
 const corsOptions = {
-    origin: `http://${process.env.FRONT_END_HOST!}`,
+    origin: `${process.env.FRONT_END_URL!}`,
     credentials: true,
 }
 
@@ -71,7 +71,7 @@ app.get('/account', async (req, res) => {
 
 app.get('/authenticate', async (req , res) => {
     const client = new TwitterApi({appKey: process.env.X_APP_KEY!, appSecret: process.env.X_APP_SECRET!});
-    const authLink = await client.generateAuthLink(`http://${process.env.BACK_END_HOST!}/callback`);
+    const authLink = await client.generateAuthLink(`${process.env.BACK_END_URL!}/callback`);
     oauthSecrets.set(authLink.oauth_token, authLink.oauth_token_secret);
     res.redirect(authLink.url);
 });
@@ -96,16 +96,17 @@ app.get('/callback', async (req, res) => {
         const { client: loggedClient } = await client.login(oauth_verifier as string);
         const user = await loggedClient.v2.me();
         console.log("user: " + user.data.username);
+        const oneYearInMilliseconds = 31536000000;
         res.cookie('user_id', user.data.id, {
             httpOnly: true,
-            // secure: true,
+            secure: !!process.env.SSL, // Enable secure only if process.env.SSL is truthy
             sameSite: 'none',
             signed: true,
-            maxAge: 31536000,
-            expires: new Date(Date.now() + 31536000)
+            maxAge: oneYearInMilliseconds,
+            expires: new Date(Date.now() + oneYearInMilliseconds)
         });
         console.log("set cookie")
-        res.redirect(`http://${process.env.FRONT_END_HOST!}/dashboard`);
+        res.redirect(`${process.env.FRONT_END_URL!}/dashboard`);
     } catch (e) {
         res.status(403).send('Invalid verifier or access tokens!');
     }
