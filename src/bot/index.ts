@@ -89,7 +89,7 @@ export async function handleMessage(message: string, user_id: string, message_id
     return null
 }
 
-async function getAccountForUser(user_id: string) {
+export async function getAccountForUser(user_id: string) {
     return db.$transaction(async (tx) => {
         let user = await tx.users.findUnique({
             where: {

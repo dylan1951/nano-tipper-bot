@@ -25,7 +25,7 @@ interface UserEventsResponse {
     user_events: {
         entries: Entry[] | undefined;
         users: { [key: string]: User } | undefined;
-        conversations: { [key: string]: { trusted: boolean} } | undefined;
+        conversations: { [key: string]: { trusted: boolean, type: string } } | undefined;
     };
 }
 
@@ -40,6 +40,7 @@ export type Tweet = {
     in_reply_to_user_id_str: string;
     in_reply_to_screen_name: string;
     user_id_str: string;
+    in_reply_to_status_id_str: string;
 };
 
 type GlobalObjects = {
@@ -82,6 +83,10 @@ export default class Scraper {
                             continue
                         }
 
+                        if (conversations[entry.message.conversation_id].type !== "ONE_TO_ONE") {
+                            continue;
+                        }
+
                         const trusted = conversations[entry.message.conversation_id].trusted;
 
                         console.log(`Received message ${id} from ${users[sender_id].screen_name}: ${text}`);
@@ -104,6 +109,10 @@ export default class Scraper {
                         const userMentioned = tweet.entities.user_mentions.some(
                             (mention) => mention.id_str === process.env.X_USER_ID!
                         );
+
+                        if (!tweet.in_reply_to_status_id_str) {
+                            continue;
+                        }
 
                         if (userMentioned) {
                             console.log({

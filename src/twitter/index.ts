@@ -10,9 +10,9 @@ const twitterClient = new TwitterApi({
 export async function replyToTweet(tweet_id: string, message: string) {
     console.log(`Replying to tweet ${tweet_id}: ${message}`);
 
-    await twitterClient.v2.tweet(message, {
-        reply: {
-            in_reply_to_tweet_id: tweet_id
-        }
-    });
+    // await twitterClient.v2.tweet(message, {
+    //     reply: {
+    //         in_reply_to_tweet_id: tweet_id
+    //     }
+    // });
 }

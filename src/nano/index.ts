@@ -2,23 +2,30 @@ import {checkAddress, checkAmount, checkHash, convert, Unit} from "nanocurrency"
 
 async function rpc(request: any) {
     console.log(request);
+
     const response = await fetch(`http://${process.env.PIPPIN_HOST}:11338`, {
         method: 'POST',
         body: JSON.stringify(request)
     });
 
+    let data;
+
     try {
-        const data = await response.json();
-        if (!response.ok || 'error' in data) {
-            console.error(`RPC status ${response.status}: ${JSON.stringify(data, null, 4)}`);
-            return null;
-        }
-        console.log(data)
-        return data;
+        data = await response.json();
     } catch {
-        console.error(`RPC status ${response.status}: failed to parse JSON`);
-        return null;
+        throw Error(`RPC status ${response.status}: failed to parse JSON`);
     }
+
+    if ('error' in data) {
+        throw Error(data['error']);
+    }
+
+    if (!response.ok) {
+        throw Error(`RPC status ${response.status}: ${JSON.stringify(data, null, 4)}`);
+    }
+
+    console.log(data)
+    return data;
 }
 
 export async function balance(account: string) {
@@ -49,7 +56,7 @@ export async function createAccount(): Promise<string> {
     return data.account;
 }
 
-export async function send(destination: string, source: string, amount: string, id: string): Promise<string> {
+export async function send(destination: string, source: string, amount: string, id?: string): Promise<string> {
     if (!checkAddress(destination) || !checkAddress(source) || !checkAmount(amount)) {
         throw Error("Invalid parameters.");
     }
@@ -60,7 +67,7 @@ export async function send(destination: string, source: string, amount: string, 
         source: source,
         destination: destination,
         amount: amount,
-        id: id
+        ...(id && { id: id })
     });
 
     if (!data || !data.block) {
