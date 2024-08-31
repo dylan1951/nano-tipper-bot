@@ -123,11 +123,15 @@ export default class Scraper {
                                 .map((mention) => mention.id_str)
                                 .filter((id) => id !== tweet.in_reply_to_user_id_str);
 
-                            bot.handleMention(tweet).then(botResponse => {
-                                if (botResponse) {
-                                    replyToTweet(tweet.id_str, botResponse, excluded_user_ids);
-                                }
-                            });
+                            try {
+                                bot.handleMention(tweet).then(botResponse => {
+                                    if (botResponse) {
+                                        replyToTweet(tweet.id_str, botResponse, excluded_user_ids);
+                                    }
+                                });
+                            } catch (e) {
+                                console.error(e);
+                            }
                         }
                     }
                 }
