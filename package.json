@@ -5,7 +5,8 @@
   "main": "scraper.ts",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "npx rebrowser-patches@latest patch && tsx src/index.ts"
+    "patch": "npx rebrowser-patches@latest patch",
+    "start": "tsx src/index.ts"
   },
   "private": true,
   "dependencies": {
