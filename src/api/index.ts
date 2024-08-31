@@ -98,8 +98,9 @@ app.get('/callback', async (req, res) => {
         const oneYearInMilliseconds = 31536000000;
         res.cookie('user_id', user.data.id, {
             httpOnly: true,
-            // secure: !!process.env.SSL,
+            secure: !!process.env.SSL,
             sameSite: 'none',
+            domain: '.thenano.wiki',
             signed: true,
             maxAge: oneYearInMilliseconds,
             expires: new Date(Date.now() + oneYearInMilliseconds)
