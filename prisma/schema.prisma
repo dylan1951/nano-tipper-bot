@@ -11,8 +11,9 @@ datasource db {
 }
 
 model Users {
-  id      String @id
-  account String
+  id       String  @id
+  account  String
+  username String?
 }
 
 model Tweets {

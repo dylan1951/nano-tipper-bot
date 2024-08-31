@@ -16,25 +16,29 @@ if (process.env.SSL) {
         key: fs.readFileSync(`/etc/letsencrypt/live/api.bot.thenano.wiki/privkey.pem`),
         cert: fs.readFileSync(`/etc/letsencrypt/live/api.bot.thenano.wiki/fullchain.pem`)
     }, app).listen(443, () => {
-        console.log("API listening on port 443 using SSL")
+        console.log("API listening on port 443 using SSL");
+        askWebsocketURL();
     });
 } else {
     app.listen(process.env.PORT, () => {
-        console.log(`API listening on port ${process.env.PORT}`)
+        console.log(`API listening on port ${process.env.PORT}`);
+        askWebsocketURL();
     });
 }
 
-rl.question(`Websocket URL: `, async url => {
-    rl.close();
+function askWebsocketURL() {
+    rl.question(`Websocket URL: `, async url => {
+        rl.close();
 
-    const browser = await puppeteer.connect({browserWSEndpoint: url});
+        const browser = await puppeteer.connect({browserWSEndpoint: url});
 
-    for (const page of await browser.pages()) {
-        await page.close();
-    }
+        for (const page of await browser.pages()) {
+            await page.close();
+        }
 
-    const page = await browser.newPage()
-    await page.setViewport(null);
-    new Scraper(page).start();
-});
+        const page = await browser.newPage();
+        await page.setViewport(null);
+        new Scraper(page).start();
+    });
+}
 

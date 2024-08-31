@@ -2,7 +2,7 @@ import express, { Express } from "express"
 import cors from 'cors';
 import {TwitterApi} from "twitter-api-v2";
 import cookieParser from 'cookie-parser'
-import {getAccountForUser} from "../bot";
+import {getUser, updateUsername} from "../bot";
 import nano, {balance} from "../nano";
 import {checkAddress, convert, Unit} from "nanocurrency";
 
@@ -41,10 +41,10 @@ app.post("/withdraw", async (req, res) => {
         return res.status(400).send('Invalid amount');
     }
 
-    const account = await getAccountForUser(userId);
+    const user = await getUser(userId);
 
     try {
-        const block = await nano.send(address, account, amountRaw);
+        const block = await nano.send(address, user.account, amountRaw);
         return res.json({ block: block });
     } catch (e) {
         if (e instanceof Error) {
@@ -55,17 +55,18 @@ app.post("/withdraw", async (req, res) => {
 });
 
 app.get('/account', async (req, res) => {
-    const userSession = req.signedCookies.user_id;
+    const userId = req.signedCookies.user_id;
 
-    if (!userSession) {
+    if (!userId) {
         return res.status(401).send('Authentication required');
     }
 
-    const account = await getAccountForUser(userSession);
+    const user = await getUser(userId);
 
     return res.json({
-        account: account,
-        balance: await balance(account)
+        account: user.account,
+        balance: await balance(user.account),
+        username: user.username
     });
 });
 
@@ -95,6 +96,7 @@ app.get('/callback', async (req, res) => {
     try {
         const { client: loggedClient } = await client.login(oauth_verifier as string);
         const user = await loggedClient.v2.me();
+        await updateUsername(user.data.id, user.data.username);
         const oneYearInMilliseconds = 31536000000;
         res.cookie('user_id', user.data.id, {
             httpOnly: true,

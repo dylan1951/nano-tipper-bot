@@ -34,8 +34,8 @@ export async function handleMention(tweet: Tweet): Promise<string | null> {
 
     try {
         const amountRaw = convert(amount, {from: Unit.Nano, to: Unit.raw});
-        const destination = await getAccountForUser(tweet.in_reply_to_user_id_str);
-        const source = await getAccountForUser(tweet.user_id_str);
+        const destination = (await getUser(tweet.in_reply_to_user_id_str)).account;
+        const source = (await getUser(tweet.user_id_str)).account;
         const block = await nano.send(destination, source, amountRaw, tweet.id_str);
         return getFunResponse(amount, tweet.in_reply_to_screen_name, block);
     } catch (e) {
@@ -55,11 +55,11 @@ export async function handleMessage(message: string, user_id: string, message_id
     }
 
     if (message === "!account") {
-        return await getAccountForUser(user_id);
+        return (await getUser(user_id)).account;
     }
 
     if (message === "!balance") {
-        const account = await getAccountForUser(user_id);
+        const account = (await getUser(user_id)).account;
         return (await nano.balance(account)) + ' Ӿ';
     }
 
@@ -74,7 +74,7 @@ export async function handleMessage(message: string, user_id: string, message_id
             return "usage: !send nano_yournanoaddreess 50";
         }
 
-        const account = await getAccountForUser(user_id);
+        const account = (await getUser(user_id)).account;
 
         try {
             const amountRaw = convert(amount, {from: Unit.Nano, to: Unit.raw})
@@ -89,7 +89,7 @@ export async function handleMessage(message: string, user_id: string, message_id
     return null
 }
 
-export async function getAccountForUser(user_id: string) {
+export async function getUser(user_id: string) {
     return db.$transaction(async (tx) => {
         let user = await tx.users.findUnique({
             where: {
@@ -108,7 +108,18 @@ export async function getAccountForUser(user_id: string) {
             });
         }
 
-        return user.account;
+        return user;
+    });
+}
+
+export async function updateUsername(user_id: string, username: string) {
+    await db.users.update({
+        where: {
+            id: user_id,
+        },
+        data: {
+            username: username,
+        }
     });
 }
 
