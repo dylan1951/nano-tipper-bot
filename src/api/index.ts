@@ -45,6 +45,7 @@ app.post("/withdraw", async (req, res) => {
 
     try {
         const block = await nano.send(address, user.account, amountRaw);
+        console.log(`${user.username} withdrew ${amount} Nano to ${address}`);
         return res.json({ block: block });
     } catch (e) {
         if (e instanceof Error) {
@@ -62,6 +63,8 @@ app.get('/account', async (req, res) => {
     }
 
     const user = await getUser(userId);
+
+    console.log(`${user.username} requested their account balance`);
 
     return res.json({
         account: user.account,
