@@ -9,13 +9,6 @@ const perDayLimiter = new RateLimiterMemory({points: 50, duration: 60 * 60 * 24}
 const mentionLimiter = new RateLimiterMemory({points: 5, duration: 60 * 60 * 24});
 
 export async function handleMention(tweet: Tweet): Promise<string | null> {
-    try {
-        await mentionLimiter.consume(tweet.user_id_str);
-    } catch (e) {
-        console.log(`User ${tweet.user_id_str} hit the mention rate limit`);
-        return null;
-    }
-
     console.log("Handling tweet: " + tweet.full_text)
 
     try {
@@ -29,6 +22,13 @@ export async function handleMention(tweet: Tweet): Promise<string | null> {
 
     if (!amount) {
         console.log(`Couldn't parse tip from tweet: ${tweet.full_text}`);
+        return null;
+    }
+
+    try {
+        await mentionLimiter.consume(tweet.user_id_str);
+    } catch (e) {
+        console.log(`User ${tweet.user_id_str} hit the mention rate limit`);
         return null;
     }
 
