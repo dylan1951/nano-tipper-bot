@@ -77,7 +77,7 @@ export default class Scraper {
 
                 for (const entry of entries) {
                     if (entry.message) {
-                        const { sender_id, text, id } = entry.message.message_data;
+                        const {sender_id, text, id} = entry.message.message_data;
 
                         if (sender_id === process.env.X_USER_ID!) {
                             continue
@@ -91,12 +91,14 @@ export default class Scraper {
 
                         console.log(`Received message ${id} from ${users[sender_id].screen_name}: ${text}`);
 
-                        bot.handleMessage(text, sender_id, id).then(botResponse => {
-                            if (botResponse) {
-                                console.log(`Queued a response to message ${id} for user ${users[sender_id].screen_name}: ${botResponse}`);
-                                this.queueReply(users[sender_id].screen_name, botResponse, trusted);
-                            }
-                        });
+                        if (process.env.DMS_ENABLED) {
+                            bot.handleMessage(text, sender_id, id).then(botResponse => {
+                                if (botResponse) {
+                                    console.log(`Queued a response to message ${id} for user ${users[sender_id].screen_name}: ${botResponse}`);
+                                    this.queueReply(users[sender_id].screen_name, botResponse, trusted);
+                                }
+                            });
+                        }
                     }
                 }
             }
@@ -115,13 +117,6 @@ export default class Scraper {
                         }
 
                         if (userMentioned) {
-                            console.log({
-                                id_str: tweet.id_str,
-                                user_id_str: tweet.user_id_str,
-                                in_reply_to_user_id_str: tweet.in_reply_to_user_id_str,
-                                full_text: tweet.full_text,
-                            });
-
                             console.log(`Bot was mentioned in tweet ${tweet.id_str}: ${tweet.full_text}`);
 
                             bot.handleMention(tweet).then(botResponse => {
@@ -138,9 +133,9 @@ export default class Scraper {
     }
 
     public start() {
-        installMouseHelper(this.page).then(() => {
-            void this.page.goto('https://x.com/messages');
-        });
+        // installMouseHelper(this.page).then(() => {
+        void this.page.goto('https://x.com/notifications');
+        // });
     }
 
     private queueReply(username: string, message: string, trusted: boolean) {
