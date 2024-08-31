@@ -119,9 +119,13 @@ export default class Scraper {
                         if (userMentioned) {
                             console.log(`Bot was mentioned in tweet ${tweet.id_str}: ${tweet.full_text}`);
 
+                            const excluded_user_ids = tweet.entities.user_mentions
+                                .map((mention) => mention.id_str)
+                                .filter((id) => id !== tweet.in_reply_to_user_id_str);
+
                             bot.handleMention(tweet).then(botResponse => {
                                 if (botResponse) {
-                                    replyToTweet(tweet.id_str, botResponse);
+                                    replyToTweet(tweet.id_str, botResponse, excluded_user_ids);
                                 }
                             });
                         }

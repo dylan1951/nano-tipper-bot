@@ -7,7 +7,7 @@ const twitterClient = new TwitterApi({
     accessSecret: process.env.X_ACCESS_SECRET!
 });
 
-export async function replyToTweet(tweet_id: string, message: string) {
+export async function replyToTweet(tweet_id: string, message: string, excluded_user_ids: string[]) {
     console.log(`Replying to tweet ${tweet_id}: ${message}`);
 
     if (!tweet_id) {
@@ -16,7 +16,8 @@ export async function replyToTweet(tweet_id: string, message: string) {
 
     await twitterClient.v2.tweet(message, {
         reply: {
-            in_reply_to_tweet_id: tweet_id
+            in_reply_to_tweet_id: tweet_id,
+            exclude_reply_user_ids: excluded_user_ids,
         }
     });
 }
