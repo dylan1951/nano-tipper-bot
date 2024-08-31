@@ -96,6 +96,7 @@ app.get('/callback', async (req, res) => {
     try {
         const { client: loggedClient } = await client.login(oauth_verifier as string);
         const user = await loggedClient.v2.me();
+        await getUser(user.data.id);
         await updateUsername(user.data.id, user.data.username);
         const oneYearInMilliseconds = 31536000000;
         res.cookie('user_id', user.data.id, {
@@ -109,6 +110,7 @@ app.get('/callback', async (req, res) => {
         });
         res.redirect(`${process.env.FRONT_END_URL!}/dashboard`);
     } catch (e) {
+        console.error(e);
         res.status(403).send('Invalid verifier or access tokens!');
     }
 });
