@@ -10,6 +10,8 @@ To make a tip simply reply to a tweet and mention @NanoTipperBot using the comma
 
 You cannot specify the recipient because it would put such a massive strain on X's server to lookup the user ID that you would need to pay hundreds of dollars per month.
 
+Note that this bot doesn't work on communites including The Nano Community because of API limitations.
+
 ## Run this tip bot yourself
 
 1. Setup Pippin Nano Wallet.
