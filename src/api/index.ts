@@ -95,17 +95,15 @@ app.get('/callback', async (req, res) => {
     try {
         const { client: loggedClient } = await client.login(oauth_verifier as string);
         const user = await loggedClient.v2.me();
-        console.log("user: " + user.data.username);
         const oneYearInMilliseconds = 31536000000;
         res.cookie('user_id', user.data.id, {
             httpOnly: true,
-            secure: !!process.env.SSL, // Enable secure only if process.env.SSL is truthy
+            // secure: !!process.env.SSL,
             sameSite: 'none',
             signed: true,
             maxAge: oneYearInMilliseconds,
             expires: new Date(Date.now() + oneYearInMilliseconds)
         });
-        console.log("set cookie")
         res.redirect(`${process.env.FRONT_END_URL!}/dashboard`);
     } catch (e) {
         res.status(403).send('Invalid verifier or access tokens!');
