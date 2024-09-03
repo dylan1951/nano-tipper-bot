@@ -105,10 +105,12 @@ app.get('/account', async (req, res) => {
 
 app.get('/authenticate', async (req , res) => {
     const client = new TwitterApi({ clientId: process.env.X_CLIENT_ID!, clientSecret: process.env.X_CLIENT_SECRET! });
-    console.log("CALLBACK_URL: " + CALLBACK_URL);
     const { url, codeVerifier, state } = client.generateOAuth2AuthLink(CALLBACK_URL, { scope: ['tweet.read', 'users.read'] });
+    const redirectUrl = new URL(url);
+    redirectUrl.host = 'x.com';
+
     codeVerifiers.set(state, codeVerifier);
-    res.redirect(url);
+    res.redirect(redirectUrl.toString());
 });
 
 app.get('/callback', async (req, res) => {
