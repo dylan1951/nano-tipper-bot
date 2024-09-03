@@ -1,7 +1,6 @@
-import {Page} from "puppeteer-core";
-import bot from "../bot"
+import puppeteer, {Page} from "puppeteer-core";
 import {createCursor, GhostCursor, installMouseHelper} from "ghost-cursor";
-import {replyToTweet} from "../twitter";
+import readline from "node:readline";
 
 type User = {
     id_str: string;
@@ -49,23 +48,24 @@ type GlobalObjects = {
     };
 };
 
-export default class Scraper {
+class Scraper {
     private readonly page: Page;
     private replyQueue: Promise<void> = Promise.resolve();
-    private cursor: GhostCursor;
+    // private cursor: GhostCursor;
 
     constructor(page: Page) {
         this.page = page;
-        this.cursor = createCursor(this.page, {x: 476, y: 167}, false, {
-            click: {
-                hesitate: 48,
-                randomizeMoveDelay: true,
-                moveDelay: 2000,
-            },
-            move: {
-                paddingPercentage: 20
-            }
-        });
+
+        // this.cursor = createCursor(this.page, {x: 476, y: 167}, false, {
+        //     click: {
+        //         hesitate: 48,
+        //         randomizeMoveDelay: true,
+        //         moveDelay: 2000,
+        //     },
+        //     move: {
+        //         paddingPercentage: 20
+        //     }
+        // });
 
         page.on("response", async (response) => {
             if (response.url().includes("/i/api/1.1/dm/user_updates.json")) {
@@ -92,12 +92,12 @@ export default class Scraper {
                         console.log(`Received message ${id} from ${users[sender_id].screen_name}: ${text}`);
 
                         if (process.env.DMS_ENABLED) {
-                            bot.handleMessage(text, sender_id, id).then(botResponse => {
-                                if (botResponse) {
-                                    console.log(`Queued a response to message ${id} for user ${users[sender_id].screen_name}: ${botResponse}`);
-                                    this.queueReply(users[sender_id].screen_name, botResponse, trusted);
-                                }
-                            });
+                            // bot.handleMessage(text, sender_id, id).then(botResponse => {
+                            //     if (botResponse) {
+                            //         console.log(`Queued a response to message ${id} for user ${users[sender_id].screen_name}: ${botResponse}`);
+                            //         this.queueReply(users[sender_id].screen_name, botResponse, trusted);
+                            //     }
+                            // });
                         }
                     }
                 }
@@ -112,26 +112,19 @@ export default class Scraper {
                             (mention) => mention.id_str === process.env.X_USER_ID!
                         );
 
-                        if (!tweet.in_reply_to_status_id_str) {
-                            continue;
-                        }
-
                         if (userMentioned) {
                             console.log(`Bot was mentioned in tweet ${tweet.id_str}: ${tweet.full_text}`);
 
-                            const excluded_user_ids = tweet.entities.user_mentions
-                                .map((mention) => mention.id_str)
-                                .filter((id) => id !== tweet.in_reply_to_user_id_str);
-
-                            try {
-                                bot.handleMention(tweet).then(botResponse => {
-                                    if (botResponse) {
-                                        replyToTweet(tweet.id_str, botResponse, excluded_user_ids);
-                                    }
-                                });
-                            } catch (e) {
-                                console.error(e);
-                            }
+                            await fetch(`${process.env.BACK_END_URL!}/mention`, {
+                                method: "POST",
+                                headers: {
+                                    'Authorization': process.env.SCRAPER_API_KEY!,
+                                    'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify({
+                                    tweet: tweet
+                                })
+                            });
                         }
                     }
                 }
@@ -146,39 +139,58 @@ export default class Scraper {
         // });
     }
 
-    private queueReply(username: string, message: string, trusted: boolean) {
-        this.replyQueue = this.replyQueue.then(() => this.reply(username, message, trusted));
-    }
+    // private queueReply(username: string, message: string, trusted: boolean) {
+    //     this.replyQueue = this.replyQueue.then(() => this.reply(username, message, trusted));
+    // }
 
-    private async reply(username: string, message: string, trusted: boolean) {
-        if (!trusted) {
-            console.log(`Conversation with ${username} is a message request, heading there now`)
-            await this.page.waitForSelector(`a[href="/messages/requests"]`);
-            await this.cursor.click(`a[href="/messages/requests"]`);
-        }
-
-        console.log(`Waiting for conversation with ${username}`)
-
-        try {
-            await this.page.waitForSelector(`div[data-testid="conversation"]:has(a[href="/${username}"]) > div > div:nth-child(2)`);
-        } catch (error) {
-            console.error(`Failed to get conversation for ${username}`);
-            return
-        }
-
-        console.log(`Found conversation with ${username}, now replying.`)
-        await this.cursor.click(`div[data-testid="conversation"]:has(a[href="/${username}"]) > div > div:nth-child(2)`);
-
-        if (!trusted) {
-            console.log("Waiting for Accept button");
-            await this.page.waitForSelector(`div[data-viewportview="true"]:not([data-testid]) + * button`);
-            console.log("Found accept button!");
-            await this.cursor.click(`div[data-viewportview="true"]:not([data-testid]) + * button`)
-        }
-
-        await this.page.waitForSelector('div[data-testid="dmComposerTextInput_label"]');
-        await this.cursor.click('div[data-testid="dmComposerTextInput_label"]')
-        await this.page.keyboard.type(message, {delay: 20});
-        await this.page.keyboard.press('Enter');
-    }
+    // private async reply(username: string, message: string, trusted: boolean) {
+    //     if (!trusted) {
+    //         console.log(`Conversation with ${username} is a message request, heading there now`)
+    //         await this.page.waitForSelector(`a[href="/messages/requests"]`);
+    //         await this.cursor.click(`a[href="/messages/requests"]`);
+    //     }
+    //
+    //     console.log(`Waiting for conversation with ${username}`)
+    //
+    //     try {
+    //         await this.page.waitForSelector(`div[data-testid="conversation"]:has(a[href="/${username}"]) > div > div:nth-child(2)`);
+    //     } catch (error) {
+    //         console.error(`Failed to get conversation for ${username}`);
+    //         return
+    //     }
+    //
+    //     console.log(`Found conversation with ${username}, now replying.`)
+    //     await this.cursor.click(`div[data-testid="conversation"]:has(a[href="/${username}"]) > div > div:nth-child(2)`);
+    //
+    //     if (!trusted) {
+    //         console.log("Waiting for Accept button");
+    //         await this.page.waitForSelector(`div[data-viewportview="true"]:not([data-testid]) + * button`);
+    //         console.log("Found accept button!");
+    //         await this.cursor.click(`div[data-viewportview="true"]:not([data-testid]) + * button`)
+    //     }
+    //
+    //     await this.page.waitForSelector('div[data-testid="dmComposerTextInput_label"]');
+    //     await this.cursor.click('div[data-testid="dmComposerTextInput_label"]')
+    //     await this.page.keyboard.type(message, {delay: 20});
+    //     await this.page.keyboard.press('Enter');
+    // }
 }
+
+const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout,
+});
+
+rl.question(`Websocket URL: `, async url => {
+    rl.close();
+
+    const browser = await puppeteer.connect({browserWSEndpoint: url});
+
+    for (const page of await browser.pages()) {
+        await page.close();
+    }
+
+    const page = await browser.newPage();
+    await page.setViewport(null);
+    new Scraper(page).start();
+});

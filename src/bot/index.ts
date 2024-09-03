@@ -3,46 +3,57 @@ import nano from "../nano"
 import {checkAddress, checkAmount, convert, Unit} from "nanocurrency";
 import {Tweet} from "../scraper";
 import {RateLimiterMemory} from "rate-limiter-flexible";
+import {replyToTweet} from "../twitter";
 
 const perMinuteLimiter = new RateLimiterMemory({points: 3, duration: 60});
 const perDayLimiter = new RateLimiterMemory({points: 50, duration: 60 * 60 * 24});
 const mentionLimiter = new RateLimiterMemory({points: 5, duration: 60 * 60 * 24});
 
-export async function handleMention(tweet: Tweet): Promise<string | null> {
+export async function handleMention(tweet: Tweet) : Promise<void> {
     console.log("Handling tweet: " + tweet.full_text)
+
+    if (!tweet.in_reply_to_status_id_str) {
+        console.log("Mentioned in a top-level post, ignoring")
+        return;
+    }
 
     try {
         await db.tweets.create({data: {id: tweet.id_str}});
     } catch (error) {
         console.log("Already processed this tweet");
-        return null;
+        return;
     }
 
     const amount = checkTipString(tweet.full_text);
 
     if (!amount) {
         console.log(`Couldn't parse tip from tweet: ${tweet.full_text}`);
-        return null;
+        return;
     }
 
     try {
         await mentionLimiter.consume(tweet.user_id_str);
     } catch (e) {
         console.log(`User ${tweet.user_id_str} hit the mention rate limit`);
-        return null;
+        return;
     }
+
+    const excluded_user_ids = tweet.entities.user_mentions
+        .map((mention) => mention.id_str)
+        .filter((id) => id !== tweet.in_reply_to_user_id_str);
 
     try {
         const amountRaw = convert(amount, {from: Unit.Nano, to: Unit.raw});
         const destination = (await getUser(tweet.in_reply_to_user_id_str)).account;
         const source = (await getUser(tweet.user_id_str)).account;
         const block = await nano.send(destination, source, amountRaw, tweet.id_str);
-        return getFunResponse(amount, tweet.in_reply_to_screen_name, block);
+        const response = getFunResponse(amount, tweet.in_reply_to_screen_name, block);
+        void replyToTweet(tweet.id_str, response, excluded_user_ids);
     } catch (e) {
         console.log(`Failed to execute tip for ${tweet.user_id_str}: ${e}`);
     }
 
-    return null;
+    return;
 }
 
 export async function handleMessage(message: string, user_id: string, message_id: string): Promise<string | null> {
