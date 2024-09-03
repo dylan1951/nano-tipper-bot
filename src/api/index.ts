@@ -105,6 +105,7 @@ app.get('/account', async (req, res) => {
 
 app.get('/authenticate', async (req , res) => {
     const client = new TwitterApi({ clientId: process.env.X_CLIENT_ID!, clientSecret: process.env.X_CLIENT_SECRET! });
+    console.log("CALLBACK_URL: " + CALLBACK_URL);
     const { url, codeVerifier, state } = client.generateOAuth2AuthLink(CALLBACK_URL);
     codeVerifiers.set(state, codeVerifier);
     res.redirect(url);
@@ -115,7 +116,7 @@ app.get('/callback', async (req, res) => {
     const codeVerifier = codeVerifiers.get(state);
     codeVerifiers.delete(state);
 
-    if (!codeVerifier || !state || !code) {
+    if (!state || !code || !codeVerifier) {
         return res.status(400).send('You denied the app or your session expired!');
     }
 
