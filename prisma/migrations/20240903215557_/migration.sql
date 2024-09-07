@@ -1,0 +1,10 @@
+-- CreateTable
+CREATE TABLE "Tips" (
+    "hash" TEXT NOT NULL PRIMARY KEY,
+    "amount" TEXT NOT NULL,
+    "fromUserId" TEXT NOT NULL,
+    "toUserId" TEXT NOT NULL,
+    "date" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "Tips_fromUserId_fkey" FOREIGN KEY ("fromUserId") REFERENCES "Users" ("id") ON DELETE RESTRICT ON UPDATE CASCADE,
+    CONSTRAINT "Tips_toUserId_fkey" FOREIGN KEY ("toUserId") REFERENCES "Users" ("id") ON DELETE RESTRICT ON UPDATE CASCADE
+);
