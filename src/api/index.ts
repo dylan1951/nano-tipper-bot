@@ -5,6 +5,7 @@ import {getUser, handleMention, updateUsername} from "../bot";
 import nano, {balance} from "../nano";
 import {checkAddress, convert, Unit} from "nanocurrency";
 import cookieParser from "cookie-parser";
+import db from "../utils/db";
 
 const codeVerifiers = new Map();
 
@@ -41,6 +42,21 @@ app.post("/mention", async (req, res) => {
     void handleMention(req.body.tweet);
 
     return res.sendStatus(200);
+});
+
+app.get("/tips", async (req, res) => {
+    const tips = await db.tips.findMany({
+        take: 10,
+        orderBy: {
+            date: 'desc'
+        },
+        include: {
+            to: true,
+            from: true
+        }
+    });
+
+    return res.json(tips);
 });
 
 /**
