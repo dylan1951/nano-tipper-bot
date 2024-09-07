@@ -61,8 +61,6 @@ class Index {
                                     tweet: tweet
                                 })
                             });
-                        } else {
-                            console.log("bot not mentioned")
                         }
                     }
                 }
