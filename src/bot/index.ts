@@ -45,6 +45,7 @@ export async function handleMention(tweet: Tweet) : Promise<void> {
     const sender = await getUser(tweet.user_id_str);
 
     await updateUsername(tweet.in_reply_to_user_id_str, tweet.in_reply_to_screen_name);
+    await updateUsername(tweet.user_id_str, tweet.user_screen_name);
 
     try {
         const amountRaw = convert(amount, {from: Unit.Nano, to: Unit.raw});
