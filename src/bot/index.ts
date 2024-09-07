@@ -1,12 +1,11 @@
 import db from "../utils/db"
 import nano from "../nano"
-import {checkAddress, checkAmount, convert, Unit} from "nanocurrency";
-import {Tweet} from "../scraper";
+import {convert, Unit} from "nanocurrency";
+import {Tweet} from "../scraper"
 import {RateLimiterMemory} from "rate-limiter-flexible";
 import {replyToTweet} from "../twitter";
+import OpenAI from "openai";
 
-const perMinuteLimiter = new RateLimiterMemory({points: 3, duration: 60});
-const perDayLimiter = new RateLimiterMemory({points: 50, duration: 60 * 60 * 24});
 const mentionLimiter = new RateLimiterMemory({points: 5, duration: 60 * 60 * 24});
 
 export async function handleMention(tweet: Tweet) : Promise<void> {
@@ -42,62 +41,33 @@ export async function handleMention(tweet: Tweet) : Promise<void> {
         .map((mention) => mention.id_str)
         .filter((id) => id !== tweet.in_reply_to_user_id_str);
 
+    const recipient = await getUser(tweet.in_reply_to_user_id_str);
+    const sender = await getUser(tweet.user_id_str);
+
+    await updateUsername(tweet.in_reply_to_user_id_str, tweet.in_reply_to_screen_name);
+
     try {
         const amountRaw = convert(amount, {from: Unit.Nano, to: Unit.raw});
-        const destination = (await getUser(tweet.in_reply_to_user_id_str)).account;
-        const source = (await getUser(tweet.user_id_str)).account;
+        const destination = recipient.account;
+        const source = sender.account;
         const block = await nano.send(destination, source, amountRaw, tweet.id_str);
-        const response = getFunResponse(amount, tweet.in_reply_to_screen_name, block);
+
+        await db.tips.create({
+            data: {
+                hash: block,
+                amount: amount,
+                toUserId: tweet.in_reply_to_user_id_str,
+                fromUserId: tweet.user_id_str
+            }
+        });
+
+        const response = await getGPTFunResponse(amount, tweet.user_screen_name, tweet.in_reply_to_screen_name);
         void replyToTweet(tweet.id_str, response, excluded_user_ids);
     } catch (e) {
         console.log(`Failed to execute tip for ${tweet.user_id_str}: ${e}`);
     }
 
     return;
-}
-
-export async function handleMessage(message: string, user_id: string, message_id: string): Promise<string | null> {
-    try {
-        await perMinuteLimiter.consume(user_id);
-        await perDayLimiter.consume(user_id);
-    } catch (e) {
-        console.log(`User ${user_id} hit the message rate limit`);
-        return null;
-    }
-
-    if (message === "!account") {
-        return (await getUser(user_id)).account;
-    }
-
-    if (message === "!balance") {
-        const account = (await getUser(user_id)).account;
-        return (await nano.balance(account)) + ' Ӿ';
-    }
-
-    if (message.startsWith("!send")) {
-        const words = message.split(" ");
-        if (words.length != 3) {
-            return "usage: !send nano_yournanoaddreess 50";
-        }
-        const [command, address, amount] = words
-
-        if (!checkAddress(address)) {
-            return "usage: !send nano_yournanoaddreess 50";
-        }
-
-        const account = (await getUser(user_id)).account;
-
-        try {
-            const amountRaw = convert(amount, {from: Unit.Nano, to: Unit.raw})
-            const block = await nano.send(address, account, amountRaw, message_id)
-            return `Send successful. Block hash: ${block}`;
-        } catch (e) {
-            console.error(e);
-            return "usage: !send nano_yournanoaddreess 50";
-        }
-    }
-
-    return null
 }
 
 export async function getUser(user_id: string) {
@@ -145,63 +115,63 @@ function checkTipString(input: string): string | null {
     }
 }
 
-function getFunResponse(amount: string, recipient: string, blockHash: string) {
-    const nanoTipBotResponses = [
-        `💸 Just sent ${amount} Nano to @${recipient}! Block Hash: ${blockHash} 🚀`,
-        `Done! ${amount} Nano has been sent to @${recipient}. Block Hash: ${blockHash} 👍`,
-        `✨ @${recipient} just got ${amount} Nano! Block Hash: ${blockHash}. Enjoy! 💫`,
-        `🚀 Tipped ${amount} Nano to @${recipient}! Block Hash: ${blockHash}. Nano on its way! 🌟`,
-        `💰 ${amount} Nano sent to @${recipient} with love! Block Hash: ${blockHash} 💙`,
-        `🎉 ${amount} Nano just landed in @${recipient}'s wallet! Block Hash: ${blockHash} 🎊`,
-        `⚡️ Fast as lightning! ${amount} Nano sent to @${recipient}. Block Hash: ${blockHash} 🌩️`,
-        `💎 @${recipient} received ${amount} Nano! Block Hash: ${blockHash}. Stay shiny! 🌟`,
-        `🚀 Nano delivered! ${amount} Nano sent to @${recipient}. Block Hash: ${blockHash}.`,
-        `🌐 ${amount} Nano has been tipped to @${recipient}! Block Hash: ${blockHash}. Smooth transaction!`,
-        `🎁 Gifted ${amount} Nano to @${recipient}! Block Hash: ${blockHash}. Spread the joy! 🎀`,
-        `💸 Just dropped ${amount} Nano to @${recipient}! Block Hash: ${blockHash}. Nano to the moon! 🚀`,
-        `🌟 Your tip of ${amount} Nano has been sent to @${recipient}. Block Hash: ${blockHash}. Shine on!`,
-        `⚡ Tip successful! ${amount} Nano has been delivered to @${recipient}. Block Hash: ${blockHash}.`,
-        `💥 Boom! ${amount} Nano sent to @${recipient}. Block Hash: ${blockHash}. That was quick!`,
-        `💫 ${amount} Nano just flew to @${recipient}! Block Hash: ${blockHash}. Nano in action!`,
-        `📬 You've got mail! ${amount} Nano sent to @${recipient}. Block Hash: ${blockHash}.`,
-        `🏅 ${amount} Nano sent to @${recipient}! Block Hash: ${blockHash}. Nano tipping like a pro!`,
-        `🎯 Direct hit! ${amount} Nano delivered to @${recipient}. Block Hash: ${blockHash}.`,
-        `🏁 Tip complete! ${amount} Nano sent to @${recipient}. Block Hash: ${blockHash}. Race you to the next tip!`,
-        `🎉 ${amount} Nano tipped to @${recipient}! Block Hash: ${blockHash}. Nano power activated!`,
-        `🔗 Your ${amount} Nano tip has been sent to @${recipient}. Block Hash: ${blockHash}. Chain complete!`,
-        `💨 Just sent ${amount} Nano to @${recipient}! Block Hash: ${blockHash}. Fast and feeless!`,
-        `💡 @${recipient} just got ${amount} Nano! Block Hash: ${blockHash}. Bright idea!`,
-        `🎁 Tip sent! ${amount} Nano delivered to @${recipient}. Block Hash: ${blockHash}. Pay it forward!`,
-        `🚀 ${amount} Nano has been tipped to @${recipient}. Block Hash: ${blockHash}. All systems go!`,
-        `🌈 Sent ${amount} Nano to @${recipient}! Block Hash: ${blockHash}. Colorful and feeless!`,
-        `🎉 @${recipient} just received ${amount} Nano! Block Hash: ${blockHash}. Party time!`,
-        `💥 Tipped ${amount} Nano to @${recipient}! Block Hash: ${blockHash}. Nano in action!`,
-        `⚡️ ${amount} Nano sent to @${recipient}! Block Hash: ${blockHash}. Lightning speed!`,
-        `🌟 ${amount} Nano delivered to @${recipient}. Block Hash: ${blockHash}. Shining bright!`,
-        `📦 Tip complete! ${amount} Nano sent to @${recipient}. Block Hash: ${blockHash}. Nano package delivered!`,
-        `🎁 Tipped ${amount} Nano to @${recipient}! Block Hash: ${blockHash}. Nano surprise!`,
-        `🚀 ${amount} Nano has landed in @${recipient}'s wallet! Block Hash: ${blockHash}. Nano mission success!`,
-        `💸 Just sent ${amount} Nano to @${recipient}! Block Hash: ${blockHash}. Nano for the win!`,
-        `🌟 ${amount} Nano tipped to @${recipient}. Block Hash: ${blockHash}. Keep shining!`,
-        `🔔 Tip alert! ${amount} Nano sent to @${recipient}. Block Hash: ${blockHash}.`,
-        `🏅 ${amount} Nano delivered to @${recipient}. Block Hash: ${blockHash}. Tip of champions!`,
-        `💨 ${amount} Nano has been sent to @${recipient}! Block Hash: ${blockHash}. Speedy transaction!`,
-        `🎯 Tip sent! ${amount} Nano delivered to @${recipient}. Block Hash: ${blockHash}. Right on target!`,
-        `📬 You've got Nano! ${amount} Nano sent to @${recipient}. Block Hash: ${blockHash}.`,
-        `🚀 ${amount} Nano has been tipped to @${recipient}. Block Hash: ${blockHash}. Nano launch successful!`,
-        `💎 ${amount} Nano sent to @${recipient}. Block Hash: ${blockHash}. Shiny and bright!`,
-        `💸 Just sent ${amount} Nano to @${recipient}! Block Hash: ${blockHash}. Fast, feeless, Nano!`,
-        `🌟 Tip successful! ${amount} Nano delivered to @${recipient}. Block Hash: ${blockHash}.`,
-        `🎉 ${amount} Nano sent to @${recipient}! Block Hash: ${blockHash}. Enjoy the Nano love!`,
-        `⚡ ${amount} Nano delivered to @${recipient}. Block Hash: ${blockHash}. Lightning fast!`,
-        `📦 ${amount} Nano has been sent to @${recipient}. Block Hash: ${blockHash}. Package delivered!`,
-        `🚀 Tip complete! ${amount} Nano sent to @${recipient}. Block Hash: ${blockHash}. All systems go!`
-    ];
-    const randomIndex = Math.floor(Math.random() * nanoTipBotResponses.length);
-    return nanoTipBotResponses[randomIndex];
+const client = new OpenAI();
+
+async function getGPTFunResponse(amount: string, sender: string, recipient: string) {
+    const chatCompletion = await client.chat.completions.create({
+        messages: [{ role: 'user', content: `You are a Nano (Nanocurrency) tip bot on X/Twitter.
+        Here is a random fact about Nano: ${getRandomFact()}
+
+        Your name is @NanoSprinkle. You like to sprinkle Nano around the world. When someone wants to make
+        a tip they mention you, for example, '@NanoSprinkle !tip 5'.You will write a creative, fun reply for the user
+        after successfully tipping the amount.
+        
+        Write a response after executing a tip of amount ${amount} XNO from user @${sender} to @${recipient}. Be sure to include the amount.
+        
+        You can include a random fun Nano fact to make your response informative and interesting (include all details and be accurate).
+        
+        Don't use a discourse marker or prefatory expression with a ':' such as "Fun fact:"
+        
+        Be creative, unpredictable and fun.
+        
+        Keep your response to one line. Don't use water emojis. Don't use the word "splash".` }],
+        model: 'gpt-4o',
+    });
+
+    if (!chatCompletion.choices[0].message.content) {
+        throw new Error("failed to call GPT")
+    }
+
+    return chatCompletion.choices[0].message.content;
 }
 
-export default {
-    handleMessage,
-    handleMention
+function getRandomFact() {
+    const facts = [
+        "Nano transactions are fully confirmed in less than a second.",
+        "Nano used to be called RaiBlocks, after the Rai stones used as currency on the Micronesian Island of Yap.",
+        "There is a conspiracy theory posted on Reddit that Colin LeMahieu (who started Nano) is Satoshi Nakamoto.",
+        "Nano is one of the few cryptocurrencies that is fully distributed. No additional Nano can ever be created.",
+        "Nano node versions are generally named after ancient coins (Lydia, Daric, Follis)",
+        "Nano is extremely energy-efficient. 15 million Nano transactions use about as much electricity as one Bitcoin transaction.",
+        "The first-ever crypto transaction inside the British Houses of Parliament was done using Nano, during the launch of the Centre of Fintech.",
+        "There is a Nano around the globe video where community members transfer a single Nano across 11 countries in 6 continents in under a minute.",
+        "Nano's initial distribution was done through free faucets. These got so popular that they captured a significant amount of total captcha traffic after which Google reached out to Colin LeMahieu!",
+        "Nano's node software is written in C++, but a developer is currently also porting it to Rust. He does coding livestreams where you can follow along!",
+        "The Nano developers host weekly developer Spaces on Twitter where anyone can join in. Transcripts and summaries are posted on r/nanocurrency by community members.",
+        "Nano has no inbuilt limits. Its throughput is dependent on the hardware and bandwidth of the nodes running the network. If they get stronger, the network's throughput increases.",
+        "Nano is one of very few crypto where there is no 'dust'. Even if you have 0.00000000000000001 Nano, you will always still be able to move it due to Nano being feeless.",
+        "Nano uses a unique block-lattice architecture, where each account has its own blockchain.",
+        "Nano's block-lattice system allows transactions to be asynchronous, making it extremely fast.",
+        "Nano transactions are feeless, making it a popular choice for micropayments and international transfers.",
+        "Nano's consensus mechanism is called Open Representative Voting (ORV), allowing users to choose representatives to vote on their behalf.",
+        "Nano's instant finality ensures that once a transaction is confirmed, it is irreversible and immutable.",
+        "Nano has no smart contracts or tokenization, keeping the focus purely on fast, secure currency transactions.",
+        "Nano's transaction speed makes it suitable for real-world use cases like point-of-sale payments and online shopping.",
+        "Nano's total supply of 133,248,297 tokens was fully distributed through faucets, promoting fairness in its initial distribution compared to traditional ICOs or pre-mining.",
+        "Nano has no need for staking, mining, or complex consensus mechanisms, which keeps it environmentally friendly and scalable.",
+        "Nano's Open Representative Voting (ORV) consensus mechanism giving voting power to anyone who holds Nano.",
+        "Nano's block-lattice structure allows each account to independently update their blockchain, reducing network congestion.",
+    ]
+    const randomIndex = Math.floor(Math.random() * facts.length);
+    return facts[randomIndex];
 }

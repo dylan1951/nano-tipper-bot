@@ -11,9 +11,21 @@ datasource db {
 }
 
 model Users {
-  id       String  @id
-  account  String
-  username String?
+  id           String  @id
+  account      String
+  username     String?
+  sentTips     Tips[]  @relation("SentTips")
+  receivedTips Tips[]  @relation("ReceivedTips")
+}
+
+model Tips {
+  hash       String   @id
+  from       Users    @relation("SentTips", fields: [fromUserId], references: [id])
+  to         Users    @relation("ReceivedTips", fields: [toUserId], references: [id])
+  amount     String
+  fromUserId String
+  toUserId   String
+  date       DateTime @default(now())
 }
 
 model Tweets {

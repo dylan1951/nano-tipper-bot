@@ -70,7 +70,7 @@ export async function send(destination: string, source: string, amount: string, 
         ...(id && { id: id })
     });
 
-    if (!data || !data.block) {
+    if (!data || !data.block || !checkHash(data.block)) {
         throw Error("Failed to send nano.");
     }
 
