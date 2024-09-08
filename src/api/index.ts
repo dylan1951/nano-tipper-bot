@@ -6,6 +6,7 @@ import nano, {balance} from "../nano";
 import {checkAddress, convert, Unit} from "nanocurrency";
 import cookieParser from "cookie-parser";
 import db from "../utils/db";
+import {getTweetRateLimit} from "../twitter";
 
 const codeVerifiers = new Map();
 
@@ -21,6 +22,10 @@ app.use(cookieParser(process.env.COOKIE_SECRET!));
 app.use(express.json());
 
 const CALLBACK_URL = `${process.env.BACK_END_URL!}/callback`;
+
+app.get("/rate-limit", async (req, res) => {
+   return res.json(await getTweetRateLimit());
+});
 
 /**
  * This endpoint is for submitting mentions gathered externally (a browser running on another machine). It is secured

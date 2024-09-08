@@ -1,11 +1,14 @@
 import {TwitterApi, UserV2} from "twitter-api-v2";
+import { TwitterApiRateLimitPlugin } from '@twitter-api-v2/plugin-rate-limit'
+
+const rateLimitPlugin = new TwitterApiRateLimitPlugin()
 
 const twitterClient = new TwitterApi({
     appKey: process.env.X_APP_KEY!,
     appSecret: process.env.X_APP_SECRET!,
     accessToken: process.env.X_ACCESS_TOKEN!,
     accessSecret: process.env.X_ACCESS_SECRET!
-});
+}, { plugins: [rateLimitPlugin] });
 
 export async function replyToTweet(tweet_id: string, message: string, excluded_user_ids: string[]) {
     console.log(`Replying to tweet ${tweet_id}: ${message}`);
@@ -32,4 +35,8 @@ export async function getUserFromUsername(username: string) : Promise<UserV2 | n
     }
 
     return null;
+}
+
+export async function getTweetRateLimit() {
+    return rateLimitPlugin.v2.getRateLimit('tweets', 'POST');
 }

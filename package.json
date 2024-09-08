@@ -12,6 +12,7 @@
   "private": true,
   "dependencies": {
     "@prisma/client": "^5.18.0",
+    "@twitter-api-v2/plugin-rate-limit": "^1.1.0",
     "cookie-parser": "^1.4.6",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
