@@ -1,4 +1,4 @@
-import {TwitterApi} from "twitter-api-v2";
+import {TwitterApi, UserV2} from "twitter-api-v2";
 
 const twitterClient = new TwitterApi({
     appKey: process.env.X_APP_KEY!,
@@ -20,4 +20,16 @@ export async function replyToTweet(tweet_id: string, message: string, excluded_u
             exclude_reply_user_ids: excluded_user_ids,
         }
     });
+}
+
+export async function getUserFromUsername(username: string) : Promise<UserV2 | null> {
+    console.log(`Fetching user for ${username} using V2 API`);
+
+    const user = await twitterClient.v2.userByUsername(username);
+
+    if (user && user.data) {
+        return user.data;
+    }
+
+    return null;
 }

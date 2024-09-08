@@ -8,6 +8,7 @@ export type Tweet = {
     entities: {
         user_mentions: Array<{
             id_str: string;
+            screen_name: string;
         }>;
     };
     in_reply_to_user_id_str: string;
