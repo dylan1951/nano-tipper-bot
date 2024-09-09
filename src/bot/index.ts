@@ -91,7 +91,8 @@ export async function handleMention(tweet: Tweet) : Promise<void> {
                 hash: block,
                 amount: parsedTip.amount,
                 toUserId: recipientUserId,
-                fromUserId: tweet.user_id_str
+                fromUserId: tweet.user_id_str,
+                tweetId: tweet.id_str
             }
         });
 

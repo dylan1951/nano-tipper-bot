@@ -26,6 +26,7 @@ model Tips {
   fromUserId String
   toUserId   String
   date       DateTime @default(now())
+  tweetId    String?  @unique
 }
 
 model Tweets {
