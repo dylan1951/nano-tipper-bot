@@ -127,10 +127,20 @@ app.get('/account', async (req, res) => {
 
     console.log(`${user.username} requested their account balance`);
 
+    const tipsToday = await db.tips.count({
+        where: {
+            fromUserId: user.id,
+            date: {
+                gte: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+            }
+        }
+    });
+
     return res.json({
         account: user.account,
         balance: await balance(user.account),
-        username: user.username
+        username: user.username,
+        tipsToday: tipsToday
     });
 });
 
