@@ -25,6 +25,8 @@ export async function handleMention(tweet: Tweet) : Promise<void> {
         }
     });
 
+    console.log(`Tips today for user ${tweet.user_screen_name}: `, tipsToday);
+
     if (tipsToday >= 5) {
         console.log(`User ${tweet.user_id_str} hit the rate limit.`);
         return;
