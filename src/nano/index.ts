@@ -17,6 +17,7 @@ async function rpc(request: any) {
     }
 
     if ('error' in data) {
+        console.error(`Pippin gave us this error: ${data['error']}`)
         throw Error(data['error']);
     }
 
