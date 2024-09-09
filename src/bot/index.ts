@@ -20,7 +20,7 @@ export async function handleMention(tweet: Tweet) : Promise<void> {
         where: {
             fromUserId: tweet.id_str,
             date: {
-                gte: new Date(Date.now() - 24 * 60 * 60 * 1000)
+                gte: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
             }
         }
     });
