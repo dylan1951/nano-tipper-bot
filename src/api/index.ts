@@ -50,18 +50,28 @@ app.post("/mention", async (req, res) => {
 });
 
 app.get("/tips", async (req, res) => {
-    const tips = await db.tips.findMany({
-        take: 10,
-        orderBy: {
-            date: 'desc'
-        },
-        include: {
-            to: true,
-            from: true
-        }
-    });
+    const page = parseInt(req.query.page as string) || 1;
+    const pageSize = parseInt(req.query.pageSize as string) || 10;
+    const skip = (page - 1) * pageSize;
 
-    return res.json(tips);
+    try {
+        const tips = await db.tips.findMany({
+            skip: skip,
+            take: pageSize,
+            orderBy: {
+                date: 'desc'
+            },
+            include: {
+                to: true,
+                from: true
+            }
+        });
+
+        return res.json(tips);
+    } catch (error) {
+        console.error("Error fetching tips:", error);
+        return res.status(500).json({ error: "Failed to fetch tips" });
+    }
 });
 
 /**

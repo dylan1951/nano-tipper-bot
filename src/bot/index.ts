@@ -2,12 +2,9 @@ import db from "../utils/db"
 import nano from "../nano"
 import {convert, Unit} from "nanocurrency";
 import {Tweet} from "../scraper"
-import {RateLimiterMemory} from "rate-limiter-flexible";
 import {getUserFromUsername, replyToTweet} from "../twitter";
 import {parseTip} from "./parseTip";
 import {getGPTFunResponse} from "./funResponse";
-
-const mentionLimiter = new RateLimiterMemory({points: 5, duration: 60 * 60 * 24});
 
 export async function handleMention(tweet: Tweet) : Promise<void> {
     console.log(`Handling tweet from ${tweet.user_screen_name}: ` + tweet.full_text)
@@ -16,6 +13,20 @@ export async function handleMention(tweet: Tweet) : Promise<void> {
         await db.tweets.create({data: {id: tweet.id_str}});
     } catch (error) {
         console.log("Already processed this tweet");
+        return;
+    }
+
+    const tipsToday = await db.tips.count({
+        where: {
+            fromUserId: tweet.id_str,
+            date: {
+                gte: new Date(Date.now() - 24 * 60 * 60 * 1000)
+            }
+        }
+    });
+
+    if (tipsToday >= 5) {
+        console.log(`User ${tweet.user_id_str} hit the rate limit.`);
         return;
     }
 
@@ -55,13 +66,6 @@ export async function handleMention(tweet: Tweet) : Promise<void> {
         return;
     } else {
         console.log(`recipient was NOT specified`);
-    }
-
-    try {
-        await mentionLimiter.consume(tweet.user_id_str);
-    } catch (e) {
-        console.log(`User ${tweet.user_id_str} hit the mention rate limit`);
-        return;
     }
 
     const excluded_user_ids = tweet.entities.user_mentions
