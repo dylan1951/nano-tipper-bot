@@ -18,7 +18,7 @@ export async function handleMention(tweet: Tweet) : Promise<void> {
 
     const tipsToday = await db.tips.count({
         where: {
-            fromUserId: tweet.id_str,
+            fromUserId: tweet.user_id_str,
             date: {
                 gte: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
             }
