@@ -15,7 +15,7 @@ const withdrawRateLimiter = new RateLimiterMemory({
 });
 
 const balanceRateLimiter = new RateLimiterMemory({
-    points: 5,
+    points: 10,
     duration: 60,
 });
 
