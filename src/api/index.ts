@@ -7,6 +7,17 @@ import {checkAddress, convert, Unit} from "nanocurrency";
 import cookieParser from "cookie-parser";
 import db from "../utils/db";
 import {getTweetRateLimit} from "../twitter";
+import { RateLimiterMemory } from "rate-limiter-flexible";
+
+const withdrawRateLimiter = new RateLimiterMemory({
+    points: 2,
+    duration: 60,
+});
+
+const balanceRateLimiter = new RateLimiterMemory({
+    points: 5,
+    duration: 60,
+});
 
 const codeVerifiers = new Map();
 
@@ -102,6 +113,7 @@ app.post("/withdraw", async (req, res) => {
     const user = await getUser(userId);
 
     try {
+        await withdrawRateLimiter.consume(userId);
         const block = await nano.send(address, user.account, amountRaw);
         console.log(`${user.username} withdrew ${amount} Nano to ${address}`);
         return res.json({ block: block });
@@ -121,6 +133,12 @@ app.get('/account', async (req, res) => {
 
     if (!userId) {
         return res.status(401).send('Authentication required');
+    }
+
+    try {
+        await balanceRateLimiter.consume(userId);
+    } catch (e) {
+        return res.status(400).send('Hit rate limit');
     }
 
     const user = await getUser(userId);
