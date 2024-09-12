@@ -15,6 +15,7 @@ export type Tweet = {
     in_reply_to_screen_name: string;
     user_id_str: string;
     in_reply_to_status_id_str: string;
+    display_text_range: [number, number]
 };
 
 export type User = {

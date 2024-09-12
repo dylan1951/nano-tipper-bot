@@ -1,7 +1,7 @@
 import express, { Express } from "express"
 import cors from 'cors';
 import {TwitterApi} from "twitter-api-v2";
-import {getUser, handleMention, updateUsername} from "../bot";
+import {getUser, handleGiveaway, handleMention, updateUsername} from "../bot";
 import nano, {balance} from "../nano";
 import {checkAddress, convert, Unit} from "nanocurrency";
 import cookieParser from "cookie-parser";
@@ -55,9 +55,14 @@ app.post("/mention", async (req, res) => {
     const tweet: Tweet = req.body.tweet;
     const user: User = req.body.user;
 
-    console.log(`Bot was mentioned in tweet ${tweet.id_str}: ${tweet.full_text}`);
+    const [start, end] = tweet.display_text_range;
+    const displayText = tweet.full_text.slice(start, end);
 
-    void handleMention(tweet, user);
+    if (tweet.in_reply_to_status_id_str === "1834083324156854678") {
+        void handleGiveaway(tweet, user);
+    } else if (/@nanosprinkle/i.test(displayText)) {
+        void handleMention(tweet, user);
+    }
 
     return res.sendStatus(200);
 });

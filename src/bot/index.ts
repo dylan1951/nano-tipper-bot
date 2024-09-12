@@ -8,17 +8,13 @@ import {getGPTFunResponse} from "./funResponse";
 import {extractNanoAddress} from "../utils";
 
 export async function handleMention(tweet: Tweet, user: User): Promise<void> {
-    console.log(`Handling tweet from ${user.screen_name}: ` + tweet.full_text)
+    console.log(`Handling mention from ${user.screen_name}: ` + tweet.full_text)
 
     try {
         await db.tweets.create({data: {id: tweet.id_str}});
     } catch (error) {
         console.log("Already processed this tweet");
         return;
-    }
-
-    if (tweet.in_reply_to_status_id_str === "1834083324156854678") {
-        return handleGiveaway(tweet, user);
     }
 
     const tipsToday = await db.tips.count({
