@@ -17,7 +17,7 @@ export async function handleMention(tweet: Tweet, user: User): Promise<void> {
         return;
     }
 
-    if (tweet.in_reply_to_status_id_str === "1832638970636988538") {
+    if (tweet.in_reply_to_status_id_str === "1832704635465064536") {
         return handleGiveaway(tweet, user);
     }
 
@@ -134,7 +134,7 @@ export async function handleGiveaway(tweet: Tweet, user: User) {
         await db.giveawayParticipants.create({
             data: {
                 userId: tweet.id_str,
-                giveawayPostId: "1832638970636988538",
+                giveawayPostId: "1832704635465064536",
                 tweetId: tweet.id_str,
                 address: address,
             }
