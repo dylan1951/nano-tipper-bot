@@ -17,7 +17,7 @@ export async function handleMention(tweet: Tweet, user: User): Promise<void> {
         return;
     }
 
-    if (tweet.in_reply_to_status_id_str === "1832704635465064536") {
+    if (tweet.in_reply_to_status_id_str === "1834083324156854678") {
         return handleGiveaway(tweet, user);
     }
 
@@ -118,10 +118,10 @@ export async function handleMention(tweet: Tweet, user: User): Promise<void> {
 }
 
 export async function handleGiveaway(tweet: Tweet, user: User) {
-    if (user.followers_count < 100 && !user.ext_is_blue_verified) {
-        console.log("User didn't meet the requirements for the giveaway.");
-        return;
-    }
+    // if (user.followers_count < 100 && !user.ext_is_blue_verified) {
+    //     console.log("User didn't meet the requirements for the giveaway.");
+    //     return;
+    // }
 
     const address = extractNanoAddress(tweet.full_text);
 
@@ -134,7 +134,7 @@ export async function handleGiveaway(tweet: Tweet, user: User) {
         await db.giveawayParticipants.create({
             data: {
                 userId: tweet.user_id_str,
-                giveawayPostId: "1832704635465064536",
+                giveawayPostId: "1834083324156854678",
                 tweetId: tweet.id_str,
                 address: address,
             }
@@ -144,9 +144,12 @@ export async function handleGiveaway(tweet: Tweet, user: User) {
         return;
     }
 
-    await send(address, "nano_1yu3u8zq9s9wgr6anjseqsuzg7d3ezns8yf3mwwexc75bypwhyw3y69xymen", "100000000000000000000000000", tweet.id_str);
-
-    console.log("Successfully handled giveaway reply from " + user.screen_name);
+    try {
+        await send(address, "nano_1yu3u8zq9s9wgr6anjseqsuzg7d3ezns8yf3mwwexc75bypwhyw3y69xymen", "10000000000000000000000000000", tweet.id_str);
+        console.log("Successfully handled giveaway reply from " + user.screen_name);
+    } catch (e) {
+        console.error(`Failed to send nano to ${user.screen_name} for giveaway: ${e}`)
+    }
 }
 
 export async function getUser(user_id: string) {
