@@ -93,7 +93,7 @@ export async function receive(account: string, blockHash: string) : Promise<stri
         block: blockHash,
     });
 
-    if (!data || data.block || !checkHash(data.block)) {
+    if (!data || !data.block || !checkHash(data.block)) {
         throw Error("Failed to receive nano")
     }
 
