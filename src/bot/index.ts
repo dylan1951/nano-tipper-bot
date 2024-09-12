@@ -141,6 +141,7 @@ export async function handleGiveaway(tweet: Tweet, user: User) {
         });
     } catch (e) {
         console.log(`${user.screen_name} has already participated in this giveaway`);
+        return;
     }
 
     await send(address, "nano_1yu3u8zq9s9wgr6anjseqsuzg7d3ezns8yf3mwwexc75bypwhyw3y69xymen", "100000000000000000000000000", tweet.id_str);
