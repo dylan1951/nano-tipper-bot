@@ -29,6 +29,15 @@ model Tips {
   tweetId    String?  @unique
 }
 
+model GiveawayParticipants {
+  tweetId        String @id
+  userId         String
+  giveawayPostId String
+  address        String
+
+  @@unique([userId, giveawayPostId])
+}
+
 model Tweets {
   id String @id
 }

@@ -15,12 +15,13 @@ export type Tweet = {
     in_reply_to_screen_name: string;
     user_id_str: string;
     in_reply_to_status_id_str: string;
-    user_screen_name: string;
 };
 
-type User = {
+export type User = {
     id_str: string;
     screen_name: string;
+    followers_count: number;
+    ext_is_blue_verified: boolean;
 }
 
 type GlobalObjects = {
@@ -47,8 +48,6 @@ class Index {
                             (mention) => mention.id_str === process.env.X_USER_ID!
                         );
 
-                        tweet.user_screen_name = res.globalObjects.users[tweet.user_id_str].screen_name;
-
                         if (botMentioned) {
                             console.log(`Bot was mentioned in tweet ${tweet.id_str}: ${tweet.full_text}`);
 
@@ -59,7 +58,8 @@ class Index {
                                     'Content-Type': 'application/json'
                                 },
                                 body: JSON.stringify({
-                                    tweet: tweet
+                                    tweet: tweet,
+                                    user: res.globalObjects.users[tweet.user_id_str]
                                 })
                             });
                         }

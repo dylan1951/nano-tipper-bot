@@ -1,19 +1,23 @@
 import db from "../utils/db"
-import nano from "../nano"
+import nano, {receive, send} from "../nano"
 import {convert, Unit} from "nanocurrency";
-import {Tweet} from "../scraper"
+import {Tweet, User} from "../scraper"
 import {getUserFromUsername, replyToTweet} from "../twitter";
 import {parseTip} from "./parseTip";
 import {getGPTFunResponse} from "./funResponse";
 
-export async function handleMention(tweet: Tweet) : Promise<void> {
-    console.log(`Handling tweet from ${tweet.user_screen_name}: ` + tweet.full_text)
+export async function handleMention(tweet: Tweet, user: User): Promise<void> {
+    console.log(`Handling tweet from ${user.screen_name}: ` + tweet.full_text)
 
     try {
         await db.tweets.create({data: {id: tweet.id_str}});
     } catch (error) {
         console.log("Already processed this tweet");
         return;
+    }
+
+    if (tweet.in_reply_to_status_id_str === "1832638970636988538") {
+        return handleGiveaway(tweet, user);
     }
 
     const tipsToday = await db.tips.count({
@@ -25,7 +29,7 @@ export async function handleMention(tweet: Tweet) : Promise<void> {
         }
     });
 
-    console.log(`Tips today for user ${tweet.user_screen_name}: `, tipsToday);
+    console.log(`Tips today for user ${user.screen_name}: `, tipsToday);
 
     if (tipsToday >= 5) {
         console.log(`User ${tweet.user_id_str} hit the rate limit.`);
@@ -78,7 +82,7 @@ export async function handleMention(tweet: Tweet) : Promise<void> {
     const sender = await getUser(tweet.user_id_str);
 
     await updateUsername(recipientUserId, recipientUsername);
-    await updateUsername(tweet.user_id_str, tweet.user_screen_name);
+    await updateUsername(tweet.user_id_str, user.screen_name);
 
     try {
         const amountRaw = convert(parsedTip.amount, {from: Unit.Nano, to: Unit.raw});
@@ -96,13 +100,51 @@ export async function handleMention(tweet: Tweet) : Promise<void> {
             }
         });
 
-        const response = await getGPTFunResponse(parsedTip.amount, tweet.user_screen_name, recipientUsername, tweet.full_text);
-        void replyToTweet(tweet.id_str, response, excluded_user_ids);
+        const response = await getGPTFunResponse(parsedTip.amount, user.screen_name, recipientUsername, tweet.full_text);
+        await replyToTweet(tweet.id_str, response, excluded_user_ids);
+
+        try {
+            const receiveBlockHash = await receive(destination, block);
+            console.log(`Successfully received ${block} ${receiveBlockHash}`);
+        } catch (e) {
+            console.error("Failed to receive block!");
+        }
     } catch (e) {
         console.log(`Failed to execute tip for ${tweet.user_id_str}: ${e}`);
     }
 
     return;
+}
+
+export async function handleGiveaway(tweet: Tweet, user: User) {
+    if (user.followers_count < 100 && !user.ext_is_blue_verified) {
+        console.log("User didn't meet the requirements for the giveaway.");
+        return;
+    }
+
+    const address = extractNanoAddress(tweet.full_text);
+
+    if (!address) {
+        console.log("Couldn't parse address from giveaway reply");
+        return;
+    }
+
+    try {
+        await db.giveawayParticipants.create({
+            data: {
+                userId: tweet.id_str,
+                giveawayPostId: "1832638970636988538",
+                tweetId: tweet.id_str,
+                address: address,
+            }
+        });
+    } catch (e) {
+        console.log(`${user.screen_name} has already participated in this giveaway`);
+    }
+
+    await send(address, "nano_1yu3u8zq9s9wgr6anjseqsuzg7d3ezns8yf3mwwexc75bypwhyw3y69xymen", "100000000000000000000000000", tweet.id_str);
+
+    console.log("Successfully handled giveaway reply from " + user.screen_name);
 }
 
 export async function getUser(user_id: string) {

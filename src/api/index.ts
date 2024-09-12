@@ -8,6 +8,7 @@ import cookieParser from "cookie-parser";
 import db from "../utils/db";
 import {getTweetRateLimit} from "../twitter";
 import { RateLimiterMemory } from "rate-limiter-flexible";
+import {Tweet, User} from "../scraper";
 
 const withdrawRateLimiter = new RateLimiterMemory({
     points: 2,
@@ -51,11 +52,12 @@ app.post("/mention", async (req, res) => {
         return res.sendStatus(400);
     }
 
-    const tweet = req.body.tweet;
+    const tweet: Tweet = req.body.tweet;
+    const user: User = req.body.user;
 
     console.log(`Bot was mentioned in tweet ${tweet.id_str}: ${tweet.full_text}`);
 
-    void handleMention(req.body.tweet);
+    void handleMention(tweet, user);
 
     return res.sendStatus(200);
 });

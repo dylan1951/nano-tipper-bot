@@ -81,6 +81,25 @@ export async function send(destination: string, source: string, amount: string, 
     return data.block;
 }
 
+export async function receive(account: string, blockHash: string) : Promise<string> {
+    if (!checkAddress(account) || !checkHash(blockHash)) {
+        throw Error("Receive: invalid parameters.")
+    }
+
+    const data = await rpc({
+        action: "receive",
+        wallet: process.env.WALLET!,
+        account: account,
+        block: blockHash,
+    });
+
+    if (!data || data.block || !checkHash(data.block)) {
+        throw Error("Failed to receive nano")
+    }
+
+    return data.block;
+}
+
 export default {
     send: send,
     createAccount: createAccount,
