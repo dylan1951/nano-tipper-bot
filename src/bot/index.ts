@@ -133,7 +133,7 @@ export async function handleGiveaway(tweet: Tweet, user: User) {
     try {
         await db.giveawayParticipants.create({
             data: {
-                userId: tweet.id_str,
+                userId: tweet.user_id_str,
                 giveawayPostId: "1832704635465064536",
                 tweetId: tweet.id_str,
                 address: address,
