@@ -5,6 +5,7 @@ import {Tweet, User} from "../scraper"
 import {getUserFromUsername, replyToTweet} from "../twitter";
 import {parseTip} from "./parseTip";
 import {getGPTFunResponse} from "./funResponse";
+import {extractNanoAddress} from "../utils";
 
 export async function handleMention(tweet: Tweet, user: User): Promise<void> {
     console.log(`Handling tweet from ${user.screen_name}: ` + tweet.full_text)
