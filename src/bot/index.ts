@@ -108,7 +108,7 @@ export async function handleMention(tweet: Tweet, user: User): Promise<void> {
             const receiveBlockHash = await receive(destination, block);
             console.log(`Successfully received ${block} ${receiveBlockHash}`);
         } catch (e) {
-            console.error("Failed to receive block!");
+            console.error(`Failed to receive block: ${e}`);
         }
     } catch (e) {
         console.log(`Failed to execute tip for ${tweet.user_id_str}: ${e}`);
