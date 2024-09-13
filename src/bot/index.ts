@@ -1,5 +1,5 @@
 import db from "../utils/db"
-import nano, {receive, send} from "../nano"
+import nano from "../nano"
 import {convert, Unit} from "nanocurrency";
 import {Tweet, User} from "../scraper"
 import {getUserFromUsername, replyToTweet} from "../twitter";
@@ -101,7 +101,7 @@ export async function handleMention(tweet: Tweet, user: User): Promise<void> {
         await replyToTweet(tweet.id_str, response, excluded_user_ids);
 
         try {
-            const receiveBlockHash = await receive(destination, block);
+            const receiveBlockHash = await nano.receive(destination, block);
             console.log(`Successfully received ${block} ${receiveBlockHash}`);
         } catch (e) {
             console.error(`Failed to receive block: ${e}`);
@@ -141,7 +141,7 @@ export async function handleGiveaway(tweet: Tweet, user: User) {
     }
 
     try {
-        await send(address, "nano_1yu3u8zq9s9wgr6anjseqsuzg7d3ezns8yf3mwwexc75bypwhyw3y69xymen", "10000000000000000000000000000", tweet.id_str);
+        await nano.send(address, "nano_1yu3u8zq9s9wgr6anjseqsuzg7d3ezns8yf3mwwexc75bypwhyw3y69xymen", "10000000000000000000000000000", tweet.id_str);
         console.log("Successfully handled giveaway reply from " + user.screen_name);
     } catch (e) {
         console.error(`Failed to send nano to ${user.screen_name} for giveaway: ${e}`)

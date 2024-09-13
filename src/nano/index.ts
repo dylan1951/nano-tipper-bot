@@ -29,22 +29,24 @@ async function rpc(request: any) {
     return data;
 }
 
-export async function balance(account: string) {
+async function balance(account: string) {
     const data = await rpc({
         action: "account_balance",
         account: account,
+        include_only_confirmed: false
     });
 
     if (!data || !data.balance || !data.receivable) {
         throw Error("Failed to get balance.");
     }
 
-    const balanceRaw = BigInt(data.balance) + BigInt(data.receivable)
-
-    return convert(balanceRaw.toString(), {from: Unit.raw, to: Unit.Nano})
+    return {
+        balance: convert(data.balance, {from: Unit.raw, to: Unit.Nano}),
+        receivable: convert(data.receivable, {from: Unit.raw, to: Unit.Nano}),
+    }
 }
 
-export async function createAccount(): Promise<string> {
+async function createAccount(): Promise<string> {
     const data = await rpc({
         action: 'account_create',
         wallet: process.env.WALLET
@@ -57,7 +59,7 @@ export async function createAccount(): Promise<string> {
     return data.account;
 }
 
-export async function send(destination: string, source: string, amount: string, id?: string): Promise<string> {
+async function send(destination: string, source: string, amount: string, id?: string): Promise<string> {
     if (!checkAddress(destination) || !checkAddress(source) || !checkAmount(amount)) {
         throw Error("Invalid parameters.");
     }
@@ -81,7 +83,7 @@ export async function send(destination: string, source: string, amount: string, 
     return data.block;
 }
 
-export async function receive(account: string, blockHash: string) : Promise<string> {
+async function receive(account: string, blockHash: string) : Promise<string> {
     if (!checkAddress(account) || !checkHash(blockHash)) {
         throw Error("Receive: invalid parameters.")
     }
@@ -100,8 +102,28 @@ export async function receive(account: string, blockHash: string) : Promise<stri
     return data.block;
 }
 
+async function receive_all(account: string) {
+    if (!checkAddress(account)) {
+        throw Error("Receive: invalid parameters.")
+    }
+
+    const data: { received: number} = await rpc({
+        action: "account_receive_all",
+        wallet: process.env.WALLET!,
+        account: account,
+    });
+
+    if (!data) {
+        throw Error("Failed to receive all")
+    }
+
+    return data;
+}
+
 export default {
     send: send,
     createAccount: createAccount,
     balance: balance,
+    receive_all: receive_all,
+    receive: receive,
 }

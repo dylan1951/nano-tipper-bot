@@ -2,7 +2,7 @@ import express, { Express } from "express"
 import cors from 'cors';
 import {TwitterApi} from "twitter-api-v2";
 import {getUser, handleGiveaway, handleMention, updateUsername} from "../bot";
-import nano, {balance} from "../nano";
+import nano from "../nano";
 import {checkAddress, convert, Unit} from "nanocurrency";
 import cookieParser from "cookie-parser";
 import db from "../utils/db";
@@ -132,6 +132,46 @@ app.post("/withdraw", async (req, res) => {
     }
 });
 
+app.post("/receive", async (req, res) => {
+    const userId = req.signedCookies.user_id;
+
+    if (!userId) {
+        return res.status(401).send('Authentication required');
+    }
+
+    const receivable = req.body.block;
+
+    const user = await getUser(userId);
+
+    await nano.receive(user.account, receivable);
+    const balance = await nano.balance(user.account);
+    return res.json(balance);
+});
+
+app.post("/receive-all", async (req, res) => {
+    const userId = req.signedCookies.user_id;
+
+    if (!userId) {
+        return res.status(401).send('Authentication required');
+    }
+
+    const user = await getUser(userId);
+
+    console.log("receiving all")
+
+    const data = await nano.receive_all(user.account);
+
+    if (data.received > 0) {
+        console.log("received blocks!")
+        const balance = await nano.balance(user.account);
+        return res.json(balance);
+    }
+
+    console.log("nothing to receive")
+
+    return res.json({});
+});
+
 /**
  * A user endpoint for retrieving account information secured with a signed cookie containing the X user id.
  */
@@ -161,9 +201,12 @@ app.get('/account', async (req, res) => {
         }
     });
 
+    const balance = await nano.balance(user.account);
+
     return res.json({
         account: user.account,
-        balance: await balance(user.account),
+        balance: balance.balance,
+        receivable: balance.receivable,
         username: user.username,
         tipsToday: tipsToday
     });
