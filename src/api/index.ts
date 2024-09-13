@@ -187,6 +187,16 @@ app.get('/account', asyncHandler(async (req: Request, res: Response) => {
             date: {
                 gte: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
             }
+        },
+    });
+
+    const unclaimedTips = await db.tips.findMany({
+        where: {
+            toUserId: user.id,
+            claimed: false,
+        },
+        include: {
+            from: true,
         }
     });
 
@@ -197,8 +207,29 @@ app.get('/account', asyncHandler(async (req: Request, res: Response) => {
         balance: balance.balance,
         receivable: balance.receivable,
         username: user.username,
-        tipsToday: tipsToday
+        tipsToday: tipsToday,
+        unclaimedTips: unclaimedTips
     });
+}));
+
+app.post('/claim', asyncHandler(async (req: Request, res: Response) => {
+    const userId = req.signedCookies.user_id;
+
+    if (!userId) {
+        return res.status(401).send('Authentication required');
+    }
+
+    await db.tips.updateMany({
+        where: {
+            toUserId: userId,
+            claimed: false,
+        },
+        data: {
+            claimed: true
+        }
+    });
+
+    return res.sendStatus(200);
 }));
 
 app.get('/authenticate', asyncHandler(async (req: Request, res: Response) => {

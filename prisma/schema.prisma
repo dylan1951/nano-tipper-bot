@@ -27,6 +27,8 @@ model Tips {
   toUserId   String
   date       DateTime @default(now())
   tweetId    String?  @unique
+  claimed    Boolean? @default(false)
+  refundHash String?
 }
 
 model GiveawayParticipants {
