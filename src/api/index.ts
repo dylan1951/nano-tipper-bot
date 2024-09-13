@@ -144,12 +144,9 @@ app.post("/receive", asyncHandler(async (req: Request, res: Response) => {
     }
 
     const receivable = req.body.block;
-
     const user = await getUser(userId);
-
     await nano.receive(user.account, receivable);
-    const balance = await nano.balance(user.account);
-    return res.json(balance);
+    return res.sendStatus(200);
 }));
 
 app.post("/receive-all", asyncHandler(async (req: Request, res: Response) => {
@@ -160,20 +157,8 @@ app.post("/receive-all", asyncHandler(async (req: Request, res: Response) => {
     }
 
     const user = await getUser(userId);
-
-    console.log("receiving all")
-
-    const data = await nano.receive_all(user.account);
-
-    if (data.received > 0) {
-        console.log("received blocks!")
-        const balance = await nano.balance(user.account);
-        return res.json(balance);
-    }
-
-    console.log("nothing to receive")
-
-    return res.json({});
+    await nano.receive_all(user.account);
+    return res.sendStatus(200);
 }));
 
 /**
