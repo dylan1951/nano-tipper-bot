@@ -1,4 +1,4 @@
-import express, { Express } from "express"
+import express, { Express, Request, Response } from "express"
 import cors from 'cors';
 import {TwitterApi} from "twitter-api-v2";
 import {getUser, handleGiveaway, handleMention, updateUsername} from "../bot";
@@ -9,6 +9,10 @@ import db from "../utils/db";
 import {getTweetRateLimit} from "../twitter";
 import { RateLimiterMemory } from "rate-limiter-flexible";
 import {Tweet, User} from "../scraper";
+
+const asyncHandler = (fn: Function) => (req: any, res: any, next: any) => {
+    Promise.resolve(fn(req, res, next)).catch(next);
+};
 
 const withdrawRateLimiter = new RateLimiterMemory({
     points: 2,
@@ -35,15 +39,15 @@ app.use(express.json());
 
 const CALLBACK_URL = `${process.env.BACK_END_URL!}/callback`;
 
-app.get("/rate-limit", async (req, res) => {
-   return res.json(await getTweetRateLimit());
-});
+app.get("/rate-limit", asyncHandler(async (req: Request, res: Response) => {
+    res.json(await getTweetRateLimit());
+}));
 
 /**
  * This endpoint is for submitting mentions gathered externally (a browser running on another machine). It is secured
  * with an API key.
  */
-app.post("/mention", async (req, res) => {
+app.post("/mention", asyncHandler(async (req: Request, res: Response) => {
     if (!req.headers.authorization || req.headers.authorization !== process.env.SCRAPER_API_KEY) {
         return res.sendStatus(401);
     }
@@ -65,9 +69,9 @@ app.post("/mention", async (req, res) => {
     }
 
     return res.sendStatus(200);
-});
+}));
 
-app.get("/tips", async (req, res) => {
+app.get("/tips", asyncHandler(async (req: Request, res: Response) => {
     const page = parseInt(req.query.page as string) || 1;
     const pageSize = parseInt(req.query.pageSize as string) || 10;
     const skip = (page - 1) * pageSize;
@@ -90,12 +94,12 @@ app.get("/tips", async (req, res) => {
         console.error("Error fetching tips:", error);
         return res.status(500).json({ error: "Failed to fetch tips" });
     }
-});
+}));
 
 /**
  * A user endpoint for making withdrawals secured with a signed cookie containing the X user id.
  */
-app.post("/withdraw", async (req, res) => {
+app.post("/withdraw", asyncHandler(async (req: Request, res: Response) => {
     const userId = req.signedCookies.user_id;
 
     if (!userId) {
@@ -130,9 +134,9 @@ app.post("/withdraw", async (req, res) => {
         }
         throw e;
     }
-});
+}));
 
-app.post("/receive", async (req, res) => {
+app.post("/receive", asyncHandler(async (req: Request, res: Response) => {
     const userId = req.signedCookies.user_id;
 
     if (!userId) {
@@ -146,9 +150,9 @@ app.post("/receive", async (req, res) => {
     await nano.receive(user.account, receivable);
     const balance = await nano.balance(user.account);
     return res.json(balance);
-});
+}));
 
-app.post("/receive-all", async (req, res) => {
+app.post("/receive-all", asyncHandler(async (req: Request, res: Response) => {
     const userId = req.signedCookies.user_id;
 
     if (!userId) {
@@ -170,12 +174,12 @@ app.post("/receive-all", async (req, res) => {
     console.log("nothing to receive")
 
     return res.json({});
-});
+}));
 
 /**
  * A user endpoint for retrieving account information secured with a signed cookie containing the X user id.
  */
-app.get('/account', async (req, res) => {
+app.get('/account', asyncHandler(async (req: Request, res: Response) => {
     const userId = req.signedCookies.user_id;
 
     if (!userId) {
@@ -210,9 +214,9 @@ app.get('/account', async (req, res) => {
         username: user.username,
         tipsToday: tipsToday
     });
-});
+}));
 
-app.get('/authenticate', async (req , res) => {
+app.get('/authenticate', asyncHandler(async (req: Request, res: Response) => {
     const client = new TwitterApi({ clientId: process.env.X_CLIENT_ID!, clientSecret: process.env.X_CLIENT_SECRET! });
     const { url, codeVerifier, state } = client.generateOAuth2AuthLink(CALLBACK_URL, { scope: ['tweet.read', 'users.read'] });
     const redirectUrl = new URL(url);
@@ -220,9 +224,9 @@ app.get('/authenticate', async (req , res) => {
 
     codeVerifiers.set(state, codeVerifier);
     res.redirect(redirectUrl.toString());
-});
+}));
 
-app.get('/callback', async (req, res) => {
+app.get('/callback', asyncHandler(async (req: Request, res: Response) => {
     const { state, code } = req.query;
     const codeVerifier = codeVerifiers.get(state);
     codeVerifiers.delete(state);
@@ -253,6 +257,6 @@ app.get('/callback', async (req, res) => {
         console.error(e);
         res.status(403).send('Invalid verifier or access tokens!');
     }
-});
+}));
 
 export default app;
