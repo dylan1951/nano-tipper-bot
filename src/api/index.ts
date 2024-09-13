@@ -40,6 +40,12 @@ app.use(express.json());
 const CALLBACK_URL = `${process.env.BACK_END_URL!}/callback`;
 
 app.get("/rate-limit", asyncHandler(async (req: Request, res: Response) => {
+    await db.tips.updateMany({
+        data: {
+            claimed: null
+        }
+    });
+
     res.json(await getTweetRateLimit());
 }));
 
