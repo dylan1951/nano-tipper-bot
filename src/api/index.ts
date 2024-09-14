@@ -146,18 +146,20 @@ app.post("/receive", asyncHandler(async (req: Request, res: Response) => {
     const receivable = req.body.block;
     const user = await getUser(userId);
     await nano.receive(user.account, receivable);
-    return res.sendStatus(200);
-}));
 
-app.post("/receive-all", asyncHandler(async (req: Request, res: Response) => {
-    const userId = req.signedCookies.user_id;
-
-    if (!userId) {
-        return res.status(401).send('Authentication required');
+    try {
+        await db.tips.update({
+            where: {
+                hash: receivable
+            },
+            data: {
+                claimed: true
+            }
+        });
+    } catch (e) {
+        console.log("not a tip");
     }
 
-    const user = await getUser(userId);
-    await nano.receive_all(user.account);
     return res.sendStatus(200);
 }));
 
@@ -194,6 +196,7 @@ app.get('/account', asyncHandler(async (req: Request, res: Response) => {
         where: {
             toUserId: user.id,
             claimed: false,
+            refundHash: null
         },
         include: {
             from: true,
@@ -210,26 +213,6 @@ app.get('/account', asyncHandler(async (req: Request, res: Response) => {
         tipsToday: tipsToday,
         unclaimedTips: unclaimedTips
     });
-}));
-
-app.post('/claim', asyncHandler(async (req: Request, res: Response) => {
-    const userId = req.signedCookies.user_id;
-
-    if (!userId) {
-        return res.status(401).send('Authentication required');
-    }
-
-    await db.tips.updateMany({
-        where: {
-            toUserId: userId,
-            claimed: false,
-        },
-        data: {
-            claimed: true
-        }
-    });
-
-    return res.sendStatus(200);
 }));
 
 app.get('/authenticate', asyncHandler(async (req: Request, res: Response) => {

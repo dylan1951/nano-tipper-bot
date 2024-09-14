@@ -99,13 +99,6 @@ export async function handleMention(tweet: Tweet, user: User): Promise<void> {
 
         const response = await getGPTFunResponse(parsedTip.amount, user.screen_name, recipientUsername, tweet.full_text);
         await replyToTweet(tweet.id_str, response, excluded_user_ids);
-
-        try {
-            const receiveBlockHash = await nano.receive(destination, block);
-            console.log(`Successfully received ${block} ${receiveBlockHash}`);
-        } catch (e) {
-            console.error(`Failed to receive block: ${e}`);
-        }
     } catch (e) {
         console.log(`Failed to execute tip for ${tweet.user_id_str}: ${e}`);
     }
