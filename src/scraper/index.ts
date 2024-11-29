@@ -52,17 +52,21 @@ class Index {
                         if (botMentioned) {
                             console.log(`Bot was mentioned in tweet ${tweet.id_str}: ${tweet.full_text}`);
 
-                            await fetch(`${process.env.BACK_END_URL!}/mention`, {
-                                method: "POST",
-                                headers: {
-                                    'Authorization': process.env.SCRAPER_API_KEY!,
-                                    'Content-Type': 'application/json'
-                                },
-                                body: JSON.stringify({
-                                    tweet: tweet,
-                                    user: res.globalObjects.users[tweet.user_id_str]
-                                })
-                            });
+                            try {
+                                await fetch(`${process.env.BACK_END_URL!}/mention`, {
+                                    method: "POST",
+                                    headers: {
+                                        'Authorization': process.env.SCRAPER_API_KEY!,
+                                        'Content-Type': 'application/json'
+                                    },
+                                    body: JSON.stringify({
+                                        tweet: tweet,
+                                        user: res.globalObjects.users[tweet.user_id_str]
+                                    })
+                                });
+                            } catch (e) {
+                                console.error(e);
+                            }
                         }
                     }
                 }
