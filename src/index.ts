@@ -46,6 +46,7 @@ const refundTips = async () => {
             console.log(`Successfully received ${tip.hash} during the refund process`)
 
             const block = await nano.send(tip.from.account, tip.to.account, amountRaw);
+            await nano.receive(tip.from.account, block);
 
             await db.tips.update({
                 where: {
