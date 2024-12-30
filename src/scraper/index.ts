@@ -26,7 +26,7 @@ export type User = {
 }
 
 type GlobalObjects = {
-    globalObjects: {
+    globalObjects?: {
         tweets?: Record<string, Tweet>;
         users?: Record<string, User>
     };
@@ -42,7 +42,7 @@ class Index {
             if (response.url().includes("/i/api/2/notifications/all.json")) {
                 const res: GlobalObjects = await response.json();
 
-                if (res.globalObjects.tweets && res.globalObjects.users) {
+                if (res.globalObjects && res.globalObjects.tweets && res.globalObjects.users) {
                     for (const tweet of Object.values(res.globalObjects.tweets)) {
 
                         const botMentioned = tweet.entities.user_mentions.some(
